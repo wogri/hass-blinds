@@ -179,8 +179,8 @@ For every home assistant cover (I call them blinds) that you configure you need 
 
 ```yaml
 input_text:
-	raffstore_erdgeschoss_arbeitszimmer_erdgeschoss_status:
-		name: arbeitszimmer erdgeschoss Status
+  raffstore_erdgeschoss_arbeitszimmer_erdgeschoss_status:
+    name: arbeitszimmer erdgeschoss Status
   ...
 ```
 
