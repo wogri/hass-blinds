@@ -1,0 +1,624 @@
+global_modules:
+- blinds_lib
+  - hysteresis_lib
+- sun_lib
+- hysteresis_lib
+
+test:
+  class: TestWogri
+  module: test
+
+#blind_test:
+  #class: Blinds
+  #module: blinds_test
+  #blind: cover.raffstore_erdgeschoss_kueche_schiebetuer_west
+
+sun:
+  class: Sun
+  module: sun
+  global_dependencies: 
+  - sun_lib
+
+wlan:
+  class: WLAN
+  module: wlan
+  host: 192.168.6.14
+  username: admin
+  key_filename: /appdaemon/config/.ssh/id_rsa
+  interfaces:
+  - "0/17"
+  - "0/2"
+  motion:
+  - 'binary_sensor.eingangsbereich_erdgeschoss_eingangsbereich'
+  - 'binary_sensor.gang_keller_gang'
+  - 'binary_sensor.stiegenaufgang_erdgeschoss_stiegenaufgang'
+  exclude_lights:
+  - 'light.licht_erdgeschoss_zugang_west'
+  - 'light.licht_erdgeschoss_zugang_mitte'
+  - 'light.licht_erdgeschoss_zugang_ost'
+
+alarm_button:
+  class: AlarmButton
+  module: alarm
+
+alarm:
+  class: Alarm
+  module: alarm
+
+alarm_lights:
+  class: Light
+  module: lights
+  global_dependencies: 
+  - sun_lib
+  rooms:
+  - light.dimmer_obergeschoss_gang_og
+  - light.licht_obergeschoss_abstellraum
+  - light.licht_obergeschoss_bad_duschbeleuchtung
+  - light.licht_obergeschoss_kinderzimmer_emma
+  - light.licht_obergeschoss_kinderzimmer_oskar
+  - light.licht_obergeschoss_schlafzimmer
+  - light.licht_obergeschoss_wc
+  - light.licht_erdgeschoss_wc
+  - light.licht_erdgeschoss_deckenleuchte_wohnzimmer
+
+blind_kinderzimmer_oskar:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_kinderzimmer_oskar
+  contact: binary_sensor.kontakt_obergeschoss_kinderzimmer_oskar
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_oskar
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    azimuth_entry: 89
+    azimuth_exit: 256
+    manual_day_control: True
+    manual_night_control: True
+    kill_switch_hold_time: 2
+
+blind_kinderzimmer_emma:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_kinderzimmer_emma
+  contact: binary_sensor.kontakt_obergeschoss_kinderzimmer_emma
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    azimuth_entry: 89
+    azimuth_exit: 256
+    manual_day_control: True
+    manual_night_control: True
+    kill_switch_hold_time: 2
+
+blind_gang_og_nord_west:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_gang_nord_west
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    # entry and exit should never trigger. If they should take the numbers from below.
+    #azimuth_entry: 362
+    #azimuth_exit: 361
+    azimuth_entry: 256
+    azimuth_exit: 359
+    manual_day_control: True
+    kill_switch_hold_time: 6
+  dawn_lights:
+  - light.dimmer_obergeschoss_gang_og
+  - light.dimmer_obergeschoss_lesefenster_west_og
+
+blind_gang_og_nord_ost:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_gang_nord_ost
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    # entry and exit should never trigger. If they should take the numbers from below.
+    #azimuth_entry: 362
+    #azimuth_exit: 361
+    azimuth_entry: 256
+    azimuth_exit: 359
+    manual_day_control: True
+    kill_switch_hold_time: 6
+  dawn_lights:
+  - light.dimmer_obergeschoss_gang_og
+  - light.dimmer_obergeschoss_lesefenster_ost_og
+ 
+blind_wc_obergeschoss:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_wc_obergeschoss
+  contact: binary_sensor.kontakt_obergeschoss_wc
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    # entry and exit should never trigger.
+    azimuth_entry: 361
+    azimuth_exit: 0
+    # manual_night_control: True
+
+blind_esszimmer_west_hebe_schiebetuer:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind: cover.raffstore_erdgeschoss_kueche_schiebetuer_west
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  contact: binary_sensor.kontakt_erdgeschoss_kueche_hebe_schiebetuer
+  blind_config:
+    azimuth_entry: 173
+    azimuth_exit: 276
+    ledge: 200
+    window_azimuth_position: 263
+    window_type: door
+    kill_switch_hold_time: 4
+    # manual_night_control: True
+  dawn_lights:
+  - light.dimmer_erdgeschoss_essbereich
+  - light.dimmer_erdgeschoss_kuechenzeile
+  - light.licht_erdgeschoss_esstisch
+
+blind_esszimmer_west_fix:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind: cover.raffstore_erdgeschoss_kueche_fixteil_west
+  blind_config:
+    azimuth_entry: 173
+    azimuth_exit: 289
+    ledge: 200
+    window_azimuth_position: 263
+    kill_switch_hold_time: 4
+  dawn_lights:
+  - light.dimmer_erdgeschoss_essbereich
+  - light.dimmer_erdgeschoss_kuechenzeile
+  - light.licht_erdgeschoss_esstisch
+
+blind_kueche_ost:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_kueche_drehtuer_ost
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  contact: binary_sensor.kontakt_erdgeschoss_kueche_drehtuer
+  blind_config:
+    azimuth_entry: 10
+    azimuth_exit: 170
+    manual_night_control: True
+    window_type: door
+
+blind_wc_erdgeschoss:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_wc_erdgeschoss
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    azimuth_entry: 10
+    azimuth_exit: 170
+    # manual_night_control: True
+    max_inside_temperature_cold_day: 25.0
+    max_inside_temperature_warm_day: 25.0
+
+blind_esszimmer_ost_fix:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_kueche_fixverglasung_ost
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    azimuth_entry: 10
+    azimuth_exit: 170
+    lux_blind_down_threshold: 30000
+    lux_blind_up_threshold: 15000
+    kill_switch_hold_time: 2
+  dawn_lights:
+  - light.dimmer_erdgeschoss_essbereich
+  - light.dimmer_erdgeschoss_kuechenzeile
+  - light.licht_erdgeschoss_esstisch
+
+blind_buero_ost:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_arbeitszimmer_erdgeschoss
+  inside_temperature: sensor.erdgeschoss_esszimmer_temperatur
+  inside_temperature_is_no_thermostat: true
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    azimuth_entry: 10
+    azimuth_exit: 170
+    manual_night_control: True
+
+blind_wohnzimmer_sued:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_wohnzimmer_fixteil_sued
+  inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    azimuth_entry: 89
+    azimuth_exit: 258
+    manual_night_control: True
+    max_inside_temperature_cold_day: 24
+    kill_switch_hold_time: 4
+
+blind_wohnzimmer_west:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_erdgeschoss_wohnzimmer_west
+  inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  contact: binary_sensor.kontakt_erdgeschoss_wohnzimmer_hebe_schiebetuer
+  blind_config:
+    azimuth_entry: 173
+    azimuth_exit: 290
+    manual_night_control: True
+    window_type: door
+    max_inside_temperature_cold_day: 24
+    kill_switch_hold_time: 4
+
+blind_mancave:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_keller_mancave
+  inside_temperature: climate.thermostat_keller_mancave
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  contact: binary_sensor.kontakt_keller_mancave
+  blind_config:
+    azimuth_entry: 91
+    azimuth_exit: 147
+    manual_night_control: True
+    manual_day_control: True
+
+blind_abstellraum_og_ost:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_abstellraum_obergeschoss_fenster_ost
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    azimuth_entry: 10
+    azimuth_exit: 170
+    manual_night_control: True
+
+blind_bad_og:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_bad_obergeschoss
+  contact: binary_sensor.kontakt_obergeschoss_bad
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  blind_config:
+    azimuth_entry: 89
+    azimuth_exit: 256
+    manual_night_control: True
+
+blind_schlafzimmer_og:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_schlafzimmer
+  contact: binary_sensor.kontakt_obergeschoss_schlafzimmer
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    ledge: 135
+    window_height: 205
+    azimuth_entry: 89
+    window_azimuth_position: 173
+    window_type: door
+    azimuth_exit: 246
+    manual_night_control: True
+    manual_day_control: True
+    max_inside_temperature_cold_day: 21.0
+
+blind_abstellraum_og_nord:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_abstellraum_obergeschoss_fenster_nord
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    azimuth_entry: 258.77
+    azimuth_exit: 359.55
+
+heating_mancave:
+  class: Heating
+  module: heating
+  percentage: sensor.keller_mancave_heizung_stellgroesse
+  heat_switch: switch.keller_mancave_heizung_schalten
+
+blind_gang_og_sued:
+  class: Blinds
+  module: blinds
+  global_dependencies: 
+  - blinds_lib
+  - hysteresis_lib
+  - sun_lib
+  blind: cover.raffstore_obergeschoss_gang_drehtuer_sued
+  contact: binary_sensor.kontakt_obergeschoss_ausgang_terasse
+  inside_temperature: climate.thermostat_obergeschoss_kinderzimmer_emma
+  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  blind_config:
+    window_height: 205
+    ledge: 135
+    azimuth_entry: 89
+    window_azimuth_position: 173
+    window_type: door
+    azimuth_exit: 210
+    manual_night_control: True
+    kill_switch_hold_time: 2
+
+announce_keller_technikraum:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_keller_technikraum
+  text: Kellerfenster im Technikraum
+  file: kellerfenster
+
+announce_keller_ar_nord:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_keller_abstellraum_nord
+  text: Kellerfenster im noerdlichen Abstellraum
+  file: kellerfenster
+
+announce_keller_ar_sued:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_keller_abstellraum_sued
+  text: Kellerfenster im suedlichen Abstellraum
+  file: kellerfenster
+
+announce_keller_mancave:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_keller_mancave
+  text: Fenster im Hobbyraum 
+  file: kellerfenster
+
+announce_klo_eg_kueche:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_erdgeschoss_wc_bad
+  text: Klofenster im Erdgeschoss
+  file: klofenster-erdgeschoss
+
+announce_klo_og_kueche:
+  class: OpenWindowAnnouncer
+  module: sonos
+  musicbox: media_player.kuche
+  contact: kontakt_obergeschoss_wc
+  text: Klofenster im Obergeschoss
+  file: klofenster-obergeschoss
+
+music_kueche_touchpanel:
+  class: Sonos
+  module: sonos
+  source_button: switch.musik_kueche_radio_senderauswahl
+  musicbox: media_player.kuche
+  musicbox_status: switch.musik_kueche_radio_status
+  knx_address_for_reset: 5/0/7
+  knx_status_address: 5/0/8
+  stop_start_button: sensor.musik_erdgeschoss_kueche_stop_start
+  stop_start_status: sensor.musik_erdgeschoss_kueche_stop_start_status
+  notify_destination: notify.musik_kueche_radio_sendername
+  play_stop_button: switch.musik_kueche_radio
+
+music_kueche:
+  class: SonosButton
+  module: sonos
+  musicbox: media_player.kuche
+  music_button: sensor.erdgeschoss_kueche_musik
+  knx_address_for_reset: 5/0/6
+
+music_emma:
+  class: SonosButton
+  module: sonos
+  musicbox: media_player.emma
+  music_button: sensor.musik_obergeschoss_emma
+  knx_address_for_reset: 5/1/1
+
+music_oskar:
+  class: SonosButton
+  module: sonos
+  musicbox: media_player.oskar
+  music_button: sensor.musik_obergeschoss_oskar
+  knx_address_for_reset: 5/1/2
+
+music_bad_og:
+  class: SonosButton
+  module: sonos
+  musicbox: media_player.wanderbox
+  music_button: sensor.musik_obergeschoss_wanderbox
+  knx_address_for_reset: 5/1/0
+
+wrl_control:
+  class: WRL
+  module: wrl
+
+morning_dimmer_gang_og:
+  class: Dimmer
+  module: dimmer
+  global_dependencies: 
+  - sun_lib
+  light: light.dimmer_obergeschoss_gang_og
+  morning_brightness: 10
+
+morning_dimmer_kuechenzeile:
+  class: Dimmer
+  module: dimmer
+  global_dependencies: 
+  - sun_lib
+  light: light.dimmer_erdgeschoss_kuechenzeile
+  morning_brightness: 30
+
+morning_dimmer_essbereich:
+  class: Dimmer
+  module: dimmer
+  global_dependencies: 
+  - sun_lib
+  light: light.dimmer_erdgeschoss_essbereich
+  morning_brightness: 30
+  presence_detector: switch.erdgeschoss_esszimmer_bewegungsmelder
+  presence_already_detected: input_boolean.presence_detection_light_esszimmer
+  dawn_lux: 90
+  neighbor_lights:
+  - light.dimmer_erdgeschoss_kuechenzeile
+  - light.licht_erdgeschoss_esstisch
+  - switch.steckdose_erdgeschoss_essbereich_sideboard
+
+leak_sensor:
+  class: Leak
+  module: leak
+  leak_sensor: switch.keller_technikraum_leckagesensor
+  musicbox: media_player.kuche
+
+mower:
+  class: Mower
+  module: mower
+
+switches:
+  class: Switches
+  module: switches
+
+max_temp:
+  class: MaxTemp
+  module: max_temp
+  outside_temp_sensor: sensor.wetter_zentrale_funktionen_aussentemperatur
+  max_temp_sensor: input_number.max_outside_temp_over_24_hours
+  max_temp_sensor_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+
+tuya_buero_wolfgang:
+  class: Tuya
+  module: tuya
+  input_boolean_switch: input_boolean.reihenhaus_og_buero_wolfgang_licht
+  id: 20826200ecfabca9b04a
+  key: 2fa5fc8eefcc894f
+  global_dependencies: 
+  - sun_lib
+
+tuya_reihenhaus:
+  class: Tuya
+  module: tuya
+  input_boolean_switch: input_boolean.reihenhaus_stehlampe
+  id: 20826200bcddc2349066
+  key: 8ff988a02a5c2362
+  global_dependencies: 
+  - sun_lib
+
+garage:
+  class: Garage
+  module: garage
+
+entryway_speaker:
+  class: WaitingRoom
+  module: chromecast
+  musicbox: media_player.entryway_speaker
+
+disco:
+  class: Disco
+  module: disco
+
+doorbell:
+  class: Doorbell
+  module: doorbell
