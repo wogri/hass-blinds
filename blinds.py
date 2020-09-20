@@ -127,7 +127,7 @@ class Blinds(hass.Hass, Sun):
     if global_kill_switch == 'on':
       self.set_state_reason("Global Kill switch is on. All blinds are controlled manually.")
       return
-    outside_temp = self.get_state("sensor.wetter_zentrale_funktionen_aussentemperatur")
+    outside_temp = self.get_state(self.args["outside_temperature_sensor"])
     if self.is_not_a_number(outside_temp):
       self.set_state_reason('unknown outside temperature. doing nothing.')
       return
@@ -154,7 +154,7 @@ class Blinds(hass.Hass, Sun):
     alarm = self.get_state("input_boolean.alarmanlage_scharf") == "on"
     self.b.SetAlarm(alarm)
 
-    wind_lock = self.get_state("switch.wetter_zentrale_funktionen_windalarm_jalousien") == "on"
+    wind_lock = self.get_state(self.args["wind_alarm"]) == "on"
     self.b.SetWindLock(wind_lock)
 
     self.evaluate()

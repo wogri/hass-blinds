@@ -6,7 +6,7 @@ Hass-blinds is a python library to control your blinds. The python library itsel
 Hass-blinds is rather powerful and does many things, but was also written in an opinionated way for a single house in Europe (Austria).
 The code is independent of the technology (KNX, zigbee, etc) how you control your blinds. It was not designed for this independence, however it is expected that your technology can position your blinds and set an angle of your fins.
 
-The code has been tested and fine tunes over two years and should work fine if your opinions how blinds should work also match with the strategy below.
+The code has been tested and fine tuned over two years and should work fine if your opinions how blinds should work also match with the strategy below.
 
 ## Strategy
 
@@ -25,7 +25,7 @@ The mornings are tricky, because when the sun is intense in the morning it can a
 
 If you have binary sensors that know about the state of a window door (open or closed) the blinds will not go down if the door is open to avoid locking someone out.
 
-The best (and most complicated) part about hass-blinds is that they tend to be friendly to humans. If a human overrides the position of a blind because "they know better than the code" then hass-blinds backs off for a configurable amount of time.
+The best (and most complicated) part about hass-blinds is that they tend to be friendly to humans. If a human overrides the position of a blind because "they know better than the code" then hass-blinds backs off for a configurable amount of time. This method is called the kill switch. Whenever the code believes that a human overrode a blind position it will enable the kill switch. You can release the kill switch by reloading the appdaemon code - e. g. `touch blinds.py`. The kill switch time can be configured per blind and really depends on the ignorance of the people that live with you :)
 
 ## Sensor requirements
 
@@ -51,6 +51,7 @@ blind_wohnzimmer_west:
   inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
   max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
   wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
+  outside_temperature_sensor: sensor.wetter_zentrale_funktionen_aussentemperatur
   contact: binary_sensor.kontakt_erdgeschoss_wohnzimmer_hebe_schiebetuer
   blind_config:
     azimuth_entry: 173
@@ -69,17 +70,18 @@ You need to configure these parameters for every window.
 
 | yaml key | meaning |
 |----------|---------|
-| `class` | Appdaemon config parameter that hints the python class. |
-| `module` | Filename of your appdaemon config |
-| `global_dependencies` | appdaemon specific configuration that hints library dependencies |
-| `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind |
-| `inside_temperature` | the thermostat that gives you the inside temperature. Use a room closeby if you don't have thermostats in every room |
+| `class` | Appdaemon config parameter that hints the python class. Required. |
+| `module` | Filename of your appdaemon config. Required. |
+| `global_dependencies` | appdaemon specific configuration that hints library dependencies. Required. |
+| `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind. Required. |
+| `inside_temperature` | the thermostat that gives you the inside temperature. Use a room closeby if you don't have thermostats in every room. Required parameter. |
 | `max_temp_sensor_value_yesterday` | homeassistant input_number that stores yesterday's maximum temperature |
-| `wind_alarm` | homeassistant binary sensor that tells the system if a wind alarm put all blinds up |
+| `wind_alarm` | homeassistant binary sensor that tells the system if a wind alarm (too much wind) just put all blinds up. This helps the code to handle that situation instead of believing that a human overrode the settings. Hass-blinds does not act on too much wind. I would recommend implementing this in your native blind communication protocol to avoid keep things simple and save your blinds from bending in high wind situations. This parameter is required. If you don't have a wind alarm, set it to a string that doesn't exist in home assistant. |
+| `outside_temperature_sensor` | The sensore for outside temperature. Required parameter. |
 | `contact` | homeassistant binary sensor that knows if the window is open or not. Is dependent on the window_type. If the window_type is not `door`, then this sensor is not used. |
-| `blind_config` | A hash that configures the Blind class in the constructor of lib/blinds_lib.py. This allows you to override defaults. |
-| `azimuth_entry` | This is the angle of the sun when it starts hitting the window. You can find this out if you position your house on a map. North is an azimuth angle of zero. The `azumuth_entry` is the angle from the north axis when the sun starts hitting your window. You can also look at the azimuth in homeassistant, and when the sun hits your window you can just write down this number. |
-| `azimuth_exit` | This is the angle when the sun no longer shines into your window. |
+| `blind_config` | A hash that configures the Blind class in the constructor of lib/blinds_lib.py. This allows you to override defaults. Required. |
+| `azimuth_entry` | This is the angle of the sun when it starts hitting the window. You can find this out if you position your house on a map. North is an azimuth angle of zero. The `azumuth_entry` is the angle from the north axis when the sun starts hitting your window. You can also look at the azimuth in homeassistant, and when the sun hits your window you can just write down this number. This parameter is required. |
+| `azimuth_exit` | This is the angle when the sun no longer shines into your window. This parameter is required. |
 | `manual_night_control` | Set to `True` if you don't want the blinds to go down in the evening. Default is to go down, so you could omit this configuration paramter. Omit otherwise. |
 | `manual_day_control` | Set to `True` if you don't want the blinds to go up when the sun starts shining in the morning. Omit otherwise. |
 | `window_type` | Only if this is set to `door` the blinds will not go down if the window is open. Once you close the door the blind control will sleep for 30 minutes and then position itself. This waiting time is useful if you want to go out, close your door in the summer to avoid heat coming in, and therefore avoid locking yourself out. |
@@ -183,6 +185,11 @@ input_text:
     name: arbeitszimmer erdgeschoss Status
   ...
 ```
+
+#### Kill Switch
+
+There are times (for example when it snows and freezes over night) where you want to disable your blind automation and want to go full manual.
+Therefore you need to implement a kill switch in homeassistant. That entity is expected to be called `switch.raffstore_kill_switch` in homeasisstant.
 
 ## Contribute
 

@@ -7,8 +7,8 @@ class Sun(hass.Hass, Sun):
 
   def initialize(self):
     self.log("Initializing Sun data collector...")
-    self.listen_state(self.lux, entity="sensor.wetter_zentrale_funktionen_helligkeit")
-    self.listen_state(self.lux, entity="sensor.wetter_zentrale_funktionen_daemmerung")
+    self.listen_state(self.lux, entity=self.args["brightness_sensor"])
+    self.listen_state(self.lux, entity=self.args["brightness_at_dawn_sensor"])
     self.lux_values = []
     time = datetime.time(1, 1, 35)
     self.run_minutely(self.lux, time)
@@ -16,8 +16,8 @@ class Sun(hass.Hass, Sun):
   def lux(self, entity=None, attribute=None, old=None, new=None, kwargs=None):
     # self.log("lux values: %s" % self.lux_values)
     _, average = self.get_lux(
-        self.get_state("sensor.wetter_zentrale_funktionen_helligkeit"),
-        self.get_state("sensor.wetter_zentrale_funktionen_daemmerung"))
+        self.get_state(self.args["brightness_sensor"]),
+        self.get_state(self.args["brightness_at_dawn_sensor"]))
 
     if average is None:
       self.log('KNX lux values are unknown. Doing nothing.', level="ERROR")
