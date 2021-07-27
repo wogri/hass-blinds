@@ -75,6 +75,7 @@ You need to configure these parameters for every window.
 | `global_dependencies` | appdaemon specific configuration that hints library dependencies. Required. |
 | `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind. Required. |
 | `inside_temperature` | the thermostat that gives you the inside temperature. Use a room closeby if you don't have thermostats in every room. Required parameter. |
+| `inside_temperature_is_no_thermostat` | set to `true` if you don't own a thermostat but merely a device that knows the inside temperature. If this parameter is set the code will grab the state value of the entity, otherwise it will grab the `current_temperature` attribute of the entity of `inside_temperature`. |
 | `max_temp_sensor_value_yesterday` | homeassistant input_number that stores yesterday's maximum temperature |
 | `wind_alarm` | homeassistant binary sensor that tells the system if a wind alarm (too much wind) just put all blinds up. This helps the code to handle that situation instead of believing that a human overrode the settings. Hass-blinds does not act on too much wind. I would recommend implementing this in your native blind communication protocol to avoid keep things simple and save your blinds from bending in high wind situations. This parameter is required. If you don't have a wind alarm, set it to a string that doesn't exist in home assistant. |
 | `outside_temperature_sensor` | The sensore for outside temperature. Required parameter. |
