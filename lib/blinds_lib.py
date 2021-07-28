@@ -277,13 +277,12 @@ class Blind:
     if not self.disable_tilt:
       if self.last_angle is None or self.knx_current_angle is None:
         return self.NO_CHANGE
-    angle_diff = abs(self.last_angle - self.knx_current_angle)
     if (position_diff > 10) and (
         kill_switch_status != self.KILL_SWITCH_OFF_CHANGE_NEEDED):
       self.log("Turning Kill switch on due to position mismatch: last_postion: %s, knx_current_position: %s, last_angle: %s, knx_current_angle: %s" % (self.last_position, self.knx_current_position, self.last_angle, self.knx_current_angle))
       self.SetKillSwitch(self.kill_switch_hold_time * 60)
       return self.NO_CHANGE
-    if not self.disable_tilt and (angle_diff > 10) and (
+    if not self.disable_tilt and (abs(self.last_angle - self.knx_current_angle) > 10) and (
         kill_switch_status != self.KILL_SWITCH_OFF_CHANGE_NEEDED):
       self.log("Turning Kill switch on due to angle mismatch: last_postion: %s, knx_current_position: %s, last_angle: %s, knx_current_angle: %s" % (self.last_position, self.knx_current_position, self.last_angle, self.knx_current_angle))
       self.SetKillSwitch(30)
