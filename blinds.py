@@ -2,6 +2,7 @@
 import appdaemon.plugins.hass.hassapi as hass
 import datetime
 import blinds_lib
+import time
 from sun_lib import Sun
 
 class Blinds(hass.Hass, Sun):
@@ -16,6 +17,8 @@ class Blinds(hass.Hass, Sun):
     self.run_every(self.tick, ticker, 60)
     # self.run_at_sunset(self.release_kill_switch)
     self.run_daily(self.set_max_outside_temp, time)
+    if "min_temp_sensor_value_yesterday" not in self.args:
+      self.args["min_temp_sensor_value_yesterday"] = "input_number.yesterdays_min_outside_temp_over_24_hours"
     self.set_max_outside_temp(None)
     if "contact" in self.args:
       self.listen_state(self.window_closed, entity=self.args["contact"], new="off", old="on")
@@ -86,18 +89,29 @@ class Blinds(hass.Hass, Sun):
           tilt_delay = self.args["tilt_delay"]
       tilt_position = self.b.GetDesiredAngle()
       if tilt_position is None:
-        self.log("There was no angle returned. Weird.")
+        self.log("Not setting the tilt as these blinds don't have that feature.")
         self.b.UnsetMasterLock()
         return
-      self.run_in(self.set_tilt, tilt_delay, tilt_position=tilt_position,
-                  position=position, knx_current_angle=knx_current_angle)
+      # if we know how long the cover runs and they go down, then set the parameters so that the blinds can stop and set the angle faster.
+      if "blind_runtime" in self.args and position == 0:
+        self.run_in(self.set_tilt, self.args["blind_runtime"], tilt_position=tilt_position,
+                    position=position, knx_current_angle=knx_current_angle, stop=True)
+      else:
+        self.run_in(self.set_tilt, tilt_delay, tilt_position=tilt_position,
+                    position=position, knx_current_angle=knx_current_angle)
 
   def set_tilt(self, kwargs):
+    # if we were told to stop then stop the cover.
+    if kwargs.get('stop'):
+      self.log("stopping the blind to move the angle faster.")
+      self.call_service("cover/stop_cover", entity_id=self.args["blind"])
+      # wait half a second for the system to report back the current position.
+      time.sleep(1.0)
     # there is no need to change the tilt position when we send the blinds up.
     # However, we have to unset the MasterLock.
-    if kwargs.get('position') == 100 and kwargs.get('knx_current_angle') is not  None:
-      self.b.UnsetMasterLock()
-      return
+    #if kwargs.get('position') == 100 and kwargs.get('knx_current_angle') is not  None:
+      #self.b.UnsetMasterLock()
+      #return
     tilt_position = kwargs.get('tilt_position')
     self.log("Changing angle/tilt of blind %s from %s to %s" % (self.args["blind"], self.knx_current_angle, tilt_position))
     self.call_service("cover/set_cover_tilt_position", entity_id=self.args["blind"], tilt_position=tilt_position)
@@ -116,7 +130,12 @@ class Blinds(hass.Hass, Sun):
     max_outside_temp = self.get_state(self.args["max_temp_sensor_value_yesterday"])
     if self.is_not_a_number(max_outside_temp):
       max_outside_temp = 24
-    self.log(self.b.SetMaxOutsideTemperature(float(max_outside_temp)))
+
+    min_outside_temp = self.get_state(self.args["min_temp_sensor_value_yesterday"])
+    if self.is_not_a_number(min_outside_temp):
+      min_outside_temp = 21
+
+    self.log(self.b.SetMaxOutsideTemperature(float(max_outside_temp), float(min_outside_temp)))
   
   def tick(self, _unused_): # , entity, attribute, old, new, kwargs):
     # this prevents concurrency issues where blinds run longer than 60 seconds.

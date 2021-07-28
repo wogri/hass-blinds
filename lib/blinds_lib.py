@@ -71,6 +71,7 @@ class Blind:
                lux_blind_down_threshold=Sun.LUX_BLIND_DOWN_THRESHOLD,
                lux_dark=Sun.LUX_DARK,
                kill_switch_hold_time=8,
+               disable_tilt=False,
                window_height=240):
     # master lock prevents any further changes in blinds until released.
     self.master_lock = False
@@ -112,6 +113,7 @@ class Blind:
                                              max_inside_temperature_cold_day)
     self.previous_elevation = self.elevation
     self.logmsg = []
+    self.disable_tilt = disable_tilt
     self.lux_dark = lux_dark
 
   def __str__(self):
@@ -145,7 +147,7 @@ class Blind:
   def SetInsideTemperature(self, value):
     self.inside_temperature = value
 
-  def SetMaxOutsideTemperature(self, value):
+  def SetMaxOutsideTemperature(self, max_value, min_value):
     # Actually, we don't care about the maximum outside temperature (it is
     # calculated for the last day). What we do care about is if we should
     # assume it is generally warm outside or if it is generally cold outside.
@@ -159,16 +161,20 @@ class Blind:
     # 16 outside - 25 inside
 
     avg = (self.max_inside_temperature_cold_day + self.max_inside_temperature_warm_day)/2.0
-    if value > 24:
+    if max_value > 24:
       self.temperature_hysteresis = Hysteresis(self.max_inside_temperature_warm_day - 0.5,
                                                self.max_inside_temperature_warm_day)
       return "Minimum temperature to get down blinds is: %sC (seems like warm season)" % self.max_inside_temperature_warm_day
-    elif value < 16:
+    elif max_value < 16:
       self.temperature_hysteresis = Hysteresis(self.max_inside_temperature_cold_day - 0.5,
                                                self.max_inside_temperature_cold_day)
       return "Minimum temperature to get down blinds is: %sC (seems like cold season)" % self.max_inside_temperature_cold_day
     else:
-      offset = (value - 16) * 0.5
+      if min_value < 10:
+        self.temperature_hysteresis = Hysteresis(self.max_inside_temperature_cold_day - 0.5,
+                                                 self.max_inside_temperature_cold_day)
+        return "Mornings are cold, we heat the building up to %sC." % self.max_inside_temperature_cold_day 
+      offset = (max_value - 16) * 0.5
       threshold = 25 - offset
       self.temperature_hysteresis = Hysteresis(threshold - 0.5, threshold)
       return "Minimum temperature to get down blinds is: %sC (seems like transitional season)" % threshold
@@ -191,7 +197,10 @@ class Blind:
 
   def SetDesiredPositions(self, position, angle, reason):
     self.desired_position = position
-    self.desired_angle = angle
+    if self.disable_tilt:
+      self.desired_angle = None
+    else:
+      self.desired_angle = angle
     self.desired_position_reason = reason
 
   def SetLuxDark(self, threshold):
@@ -210,6 +219,8 @@ class Blind:
     return self.desired_position
 
   def GetDesiredAngle(self):
+    if self.disable_tilt:
+      return None
     return self.desired_angle
 
   def GetDesiredPositionReason(self):
@@ -260,21 +271,27 @@ class Blind:
       return self.NO_CHANGE
 
     # this is when the system has an opinion and the user overrode the
-    # situation manually. it means, we're not doing anything anymore.
-    if not ((self.last_position == self.knx_current_position) and (
-        self.last_angle == self.knx_current_angle)) and (
+    # situation manually. it means, we're not doing anything anymore. However,
+    # we are also graceful and permit 10% difference.
+    position_diff = abs(self.last_position - self.knx_current_position)
+    if not self.disable_tilt:
+      if self.last_angle is None or self.knx_current_angle is None:
+        return self.NO_CHANGE
+    angle_diff = abs(self.last_angle - self.knx_current_angle)
+    if (position_diff > 10) and (
         kill_switch_status != self.KILL_SWITCH_OFF_CHANGE_NEEDED):
-      self.log("Turning Kill switch on: last_postion: %s, knx_current_position: %s, last_angle: %s, knx_current_angle: %s" % (self.last_position, self.knx_current_position, self.last_angle, self.knx_current_angle))
-      # if we have an override in the morning don't set the kill switch
-      # forever, just set it for 60 minutes. This is useful because sometimes
-      # in the morning you want to override shit.
-      hour = datetime.datetime.now().hour
+      self.log("Turning Kill switch on due to position mismatch: last_postion: %s, knx_current_position: %s, last_angle: %s, knx_current_angle: %s" % (self.last_position, self.knx_current_position, self.last_angle, self.knx_current_angle))
       self.SetKillSwitch(self.kill_switch_hold_time * 60)
+      return self.NO_CHANGE
+    if not self.disable_tilt and (angle_diff > 10) and (
+        kill_switch_status != self.KILL_SWITCH_OFF_CHANGE_NEEDED):
+      self.log("Turning Kill switch on due to angle mismatch: last_postion: %s, knx_current_position: %s, last_angle: %s, knx_current_angle: %s" % (self.last_position, self.knx_current_position, self.last_angle, self.knx_current_angle))
+      self.SetKillSwitch(30)
       return self.NO_CHANGE
     self.UpdateLastStateFromDesiredState()
     # this is when the system has an opinion and reality agrees.
-    if (self.desired_position == self.knx_current_position) and (
-      self.desired_angle == self.knx_current_angle):
+    if (self.desired_position == self.knx_current_position) and ((
+      self.desired_angle == self.knx_current_angle) or self.disable_tilt):
       return self.NO_CHANGE
     # otherwise: we need to move to the desired position.
     return self.BLIND_NEEDS_MOVING

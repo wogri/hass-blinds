@@ -281,6 +281,23 @@ class TestBlind(unittest.TestCase):
     blind.Control()
     self.compare(blind, None, None, 'Blinds do not change on an open door')
 
+  def test_warm_day_where_sun_reaches_the_window_where_tilt_is_disabled(self):
+    blind = Blind(elevation=44.15,
+                  azimuth=244.81,
+                  azimuth_entry=173,
+                  azimuth_exit=270,
+                  wind_lock=False,
+                  window_open=False,
+                  lux_last_10_minutes=70000,
+                  outside_temperature=30,
+                  disable_tilt=True,
+                  inside_temperature=25.1,
+                  window_azimuth_position=263.0,
+                 )
+    r = blind.Control()
+    self.compare(blind, Blind.DOWN, None, 'Sun hits the window, closing blind')
+
+
   def test_warm_day_where_sun_reaches_the_window(self):
     blind = Blind(elevation=44.15,
                   azimuth=244.81,
@@ -377,19 +394,19 @@ class TestBlind(unittest.TestCase):
                   inside_temperature=21,
                   alarm_lock=True,
                  )
-    self.assertEqual(blind.SetMaxOutsideTemperature(15),
+    self.assertEqual(blind.SetMaxOutsideTemperature(15, 25),
             "Minimum temperature to get down blinds is: 25.0C (seems like cold season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(18),
+    self.assertEqual(blind.SetMaxOutsideTemperature(18, 25),
             "Minimum temperature to get down blinds is: 24.0C (seems like transitional season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(20),
+    self.assertEqual(blind.SetMaxOutsideTemperature(20, 25),
             "Minimum temperature to get down blinds is: 23.0C (seems like transitional season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(22),
+    self.assertEqual(blind.SetMaxOutsideTemperature(22, 25),
             "Minimum temperature to get down blinds is: 22.0C (seems like transitional season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(23),
+    self.assertEqual(blind.SetMaxOutsideTemperature(23, 25),
             "Minimum temperature to get down blinds is: 21.5C (seems like transitional season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(24),
+    self.assertEqual(blind.SetMaxOutsideTemperature(24, 25),
             "Minimum temperature to get down blinds is: 21.0C (seems like transitional season)")
-    self.assertEqual(blind.SetMaxOutsideTemperature(26),
+    self.assertEqual(blind.SetMaxOutsideTemperature(26, 28),
             "Minimum temperature to get down blinds is: 21.0C (seems like warm season)")
 
   @patch('blinds_lib.datetime')

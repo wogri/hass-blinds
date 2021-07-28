@@ -91,6 +91,8 @@ You need to configure these parameters for every window.
 | `ledge` | If the window is under a ledge, this is the ledge length in centimeters. If the window is not under a ledge, omit. |
 | `window_azimuth_position` | In order to do the math with a window being under a ledge we need to know the exact position of the window so we know how the ledge throws shadow. This angle describes the azimuth of the sun when the window is positioned in an exact right angle to the sun. If the window is not under a ledge, omit. |
 | `dawn_lights` | A list of homeassistant lights that change the lux threshold when the lights in a room are turned on. If the lights get turned on the blinds will go down sooner when it dawns. The reason why you might want to use this is because turning on the lights in a room changes the subjective feeling for how dark it is outside and how "watched" you feel. |
+| `blind_runtime` | Optional parameter that defines how long it will take the blind until it has moved from top to bottom. Used to set the angle faster (otherwise the blind will remain shut for a while) |
+| `disable_tilt` | Optional parameter that you would need to set to `true` in case your blinds don't have the option to set a tilt (like with roller shutters). |
 
 ## Installation
 
