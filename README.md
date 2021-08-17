@@ -19,7 +19,7 @@ If it gets dark one can configure if the blinds go down automatically or not. Th
 
 It is also sensitive to what's happening inside of rooms. If lights are turned on inside a room it is possible to change the lux thresholds so that blinds go down earlier if it dawns. 
 
-The angle of the fins will be auto-adjusted according to the height of the sun to again allow maximum light into the room. However to not make adjustments all the time this is done in ~10% steps (use the `ignore_10_percent_precision` argument to disable this)
+The angle of the fins will be auto-adjusted according to the height of the sun to again allow maximum light into the room. However to not make adjustments all the time this is done in ~10% steps.
 
 The mornings are tricky, because when the sun is intense in the morning it can already be disturbing, but the actual lux values might be low. Here we again apply a linear function of a threshold when the sun should go down in the morning depending on its height. So if the sun is still low the lux threshold is lower than if the sun reaches a higher point.
 
