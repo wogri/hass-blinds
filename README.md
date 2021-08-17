@@ -19,7 +19,7 @@ If it gets dark one can configure if the blinds go down automatically or not. Th
 
 It is also sensitive to what's happening inside of rooms. If lights are turned on inside a room it is possible to change the lux thresholds so that blinds go down earlier if it dawns. 
 
-The angle of the fins will be auto-adjusted according to the height of the sun to again allow maximum light into the room. However to not make adjustments all the time this is done in ~10% steps. 
+The angle of the fins will be auto-adjusted according to the height of the sun to again allow maximum light into the room. However to not make adjustments all the time this is done in ~10% steps (use the `ignore_10_percent_precision` argument to disable this)
 
 The mornings are tricky, because when the sun is intense in the morning it can already be disturbing, but the actual lux values might be low. Here we again apply a linear function of a threshold when the sun should go down in the morning depending on its height. So if the sun is still low the lux threshold is lower than if the sun reaches a higher point.
 
@@ -93,6 +93,7 @@ You need to configure these parameters for every window.
 | `dawn_lights` | A list of homeassistant lights that change the lux threshold when the lights in a room are turned on. If the lights get turned on the blinds will go down sooner when it dawns. The reason why you might want to use this is because turning on the lights in a room changes the subjective feeling for how dark it is outside and how "watched" you feel. |
 | `blind_runtime` | Optional parameter that defines how long it will take the blind until it has moved from top to bottom. Used to set the angle faster (otherwise the blind will remain shut for a while) |
 | `disable_tilt` | Optional parameter that you would need to set to `true` in case your blinds don't have the option to set a tilt (like with roller shutters). |
+| `ignore_10_percent_precision` | Optional parameter that you would need to set to `true` when you want to ignore 10% rounding errors on position and tilt. This is useful for blinds that have the ability to report 100% accurate values on position and tilt. |
 
 ## Installation
 

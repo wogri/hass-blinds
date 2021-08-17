@@ -68,9 +68,10 @@ class Blinds(hass.Hass, Sun):
       self.set_state_reason("unknown real-life knx position. Doing nothing.")
       return
     # because blind positions can vary when changing the tilt (!) we round on 10 percent precision.
-    if knx_current_angle is not None:
-      knx_current_angle = int(knx_current_angle / 10) * 10
-    knx_current_position = int(knx_current_position / 10) * 10
+    if "ignore_10_percent_precision" not in self.args:
+      if knx_current_angle is not None:
+        knx_current_angle = int(knx_current_angle / 10) * 10
+      knx_current_position = int(knx_current_position / 10) * 10
     self.knx_current_angle = knx_current_angle
     self.b.SetKNXPositions(knx_current_position, knx_current_angle)
     we_have_work = self.b.Evaluate()
@@ -80,20 +81,22 @@ class Blinds(hass.Hass, Sun):
     if we_have_work: 
       self.b.SetMasterLock()
       position = self.b.GetDesiredPosition()
-      tilt_delay = 0
+      tilt_delay = 85
       if position != knx_current_position:
         self.log("Changing position of blind %s from %s to %s because: %s" % (self.args["blind"], knx_current_position, position, self.b.GetDesiredPositionReason()))
         self.call_service("cover/set_cover_position", entity_id=self.args["blind"], position=position)
-        tilt_delay = 85 
-        if tilt_delay in self.args:
-          tilt_delay = self.args["tilt_delay"]
+        # if the position is UP, then don't set the tilt anymore. -> results in: Turning Kill switch on due to angle mismatch: last_postion: 100, knx_current_position: 90, last_angle: 100, knx_current_angle: 0
+        #if position == self.b.UP:
+        #  self.log("Not setting the tilt as the blinds just went up.")
+        #  self.b.UnsetMasterLock()
+        #  return
       tilt_position = self.b.GetDesiredAngle()
       if tilt_position is None:
         self.log("Not setting the tilt as these blinds don't have that feature.")
         self.b.UnsetMasterLock()
         return
       # if we know how long the cover runs and they go down, then set the parameters so that the blinds can stop and set the angle faster.
-      if "blind_runtime" in self.args and position == 0:
+      if "blind_runtime" in self.args and position == self.b.DOWN:
         self.run_in(self.set_tilt, self.args["blind_runtime"], tilt_position=tilt_position,
                     position=position, knx_current_angle=knx_current_angle, stop=True)
       else:
