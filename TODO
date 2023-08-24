@@ -1,6 +1,0 @@
-Change function 
- self.listen_state(self.temperature_update, entity=self.args["outside_temp_sensor"])  
-to 
-self.listen_state(self.temperature_update, entity_id=self.args["outside_temp_sensor"])
-
-
