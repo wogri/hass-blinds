@@ -262,6 +262,7 @@ class Blind:
     # This makes sure that positions can be overridden when the system has no
     # opinion on blind positions without activating the kill switch.
     if self.desired_position is None and self.desired_angle is None:
+      self.log("Angle cannot be set, please ensure that your blind supports tilt", level="WARNING")
       self.UpdateLastPositionFromKNX()
       return self.NO_CHANGE
 

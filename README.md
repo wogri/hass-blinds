@@ -43,10 +43,10 @@ This library is configured through the "normal" appdaemon configuration file `ap
 blind_wohnzimmer_west:
   class: Blinds
   module: blinds
-  global_dependencies: 
-  - blinds_lib
-  - hysteresis_lib
-  - sun_lib
+  dependencies: 
+  - blind_lib_global
+  - hysteresis_lib_global
+  - sun_lib_global
   blind: cover.raffstore_erdgeschoss_wohnzimmer_west
   inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
   max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
@@ -97,17 +97,34 @@ You need to configure these parameters for every window.
 
 ## Installation
 
-- Copy the python files in this into your appdaemon apps/ directory. The files in the `lib/` directory land in the `apps/lib` directory as well. 
+- For Git users:
+  Open the terminal and move to the appdaemon/apps directory and clone the git repository
+  `cd /config/appdaemon/apps` 
+  `clone https://github.com/wogri/hass-blinds.git`
+  OR if you do not have git installed:
+  Copy the python files in this repository into your `appdaemon/apps/hass-blinds` directory. The files in the `lib/` directory land in the `apps/lib` directory as well. 
 - Configure your apps.yaml file. Every window gets its own yaml dict.
 
-In addition to configuring every window the engine needs two helper apps. So please don't forget to add those: 
+In addition to configuring every window the engine needs three helper apps. So please don't forget to add those: 
 
 ```yaml
+blind_lib_global:
+  module: blinds_lib
+  global: true
+
+hysteresis_lib_global:
+  module: hysteresis_li`
+  global: true
+
+sun_lib_global:
+  module: sun_lib
+  global: true
+
 sun:
   class: Sun
   module: sun
-  global_dependencies: 
-  - sun_lib
+  dependencies: 
+  - sun_lib_global
 
 max_temp:
   class: MaxTemp
@@ -122,42 +139,32 @@ Both of these help to fill `input_number` variables inside of homeassistant. Tha
 
 ### Configuring appdaemon
 
-To do sun math correctly homeassistant and appdaemon need to know where you live. So please be sure to configure the latitude and longitude in `appdaemon.yaml`: 
+To do sun math correctly homeassistant and appdaemon need to know where you live. So please be sure to configure the latitude and longitude in `appdaemon.yaml` and your `secrets.yaml`: 
 
 ```yaml
 appdaemon:
-  threads: 30
+secrets: /config/secrets.yaml
   # Location required to calculate the time the sun rises and sets                                                          
-  latitude: 123.456
-  longitude: 78.90
+  latitude: !secret latitude_home
+  longitude: !secret longitude_home
   # Impacts weather/sunrise data (altitude above sea level in meters)                                                       
-  elevation: 303
+  elevation: !secret elevation_home
   time_zone: Europe/Vienna
   plugins:
     HASS:
       type: hass
-      ha_url: https://my.homeassistant
-      token: <PUT YOUR TOKEN HERE>
+http:
+  url: http://127.0.0.1:5050 # Default
+admin:
+api:
+hadashboard:
 ```
 
 ### Configure homeassistant
 
-In homeassistant's configuration.yaml you want to add the required input numbers so the apps can do some cross communication through homeassistant. You also need to add longitude / latitude and the sun module.
+In homeassistant's configuration.yaml you want to add the required input numbers so the apps can do some cross communication through homeassistant. Please ensure also in your setting that your HA location is correctly set.
 
 ```yaml
-homeassistant:                                                                      
-  # Name of the location where Home Assistant is running
-  name: myhome
-  # Location required to calculate the time the sun rises and sets
-  latitude: 123.456
-  longitude: 78.90
-  # Impacts weather/sunrise data (altitude above sea level in meters)
-  elevation: 303
-  # metric for Metric, imperial for Imperial
-  unit_system: metric
-  # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-  time_zone: Europe/Vienna
-
 input_number:
   sun_lux_10_minute_average:
     min: 0

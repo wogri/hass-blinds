@@ -21,15 +21,15 @@ class Blinds(hass.Hass, Sun):
       self.args["min_temp_sensor_value_yesterday"] = "input_number.yesterdays_min_outside_temp_over_24_hours"
     self.set_max_outside_temp(None)
     if "contact" in self.args:
-      self.listen_state(self.window_closed, entity=self.args["contact"], new="off", old="on")
+      self.listen_state(self.window_closed, entity_id=self.args["contact"], new="off", old="on")
 
     if "wind_alarm" in self.args:
-      self.listen_state(self.wind_alarm_off, entity=self.args["wind_alarm"], new="off", old="on")
+      self.listen_state(self.wind_alarm_off, entity_id=self.args["wind_alarm"], new="off", old="on")
 
     if "dawn_lights" in self.args:
       for light in self.args["dawn_lights"]:
-        self.listen_state(self.light_on, entity=light, new="on", old="off")
-        self.listen_state(self.light_off, entity=light, new="off", old="on")
+        self.listen_state(self.light_on, entity_id=light, new="on", old="off")
+        self.listen_state(self.light_off, entity_id=light, new="off", old="on")
 
   def window_closed(self, entity, attribute, old, new, kwargs):
     if "window_type" in self.args["blind_config"] and self.args["blind_config"]["window_type"] == "door":
@@ -128,6 +128,7 @@ class Blinds(hass.Hass, Sun):
     # self.log(reason)
     obj = "input_text.%s_status" % self.args["blind"].replace("cover.", "")
     self.call_service("input_text/set_value", entity_id=obj, value=reason) 
+
 
   def set_max_outside_temp(self, _unused):
     max_outside_temp = self.get_state(self.args["max_temp_sensor_value_yesterday"])
