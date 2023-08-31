@@ -74,6 +74,7 @@ You need to configure these parameters for every window.
 | `module` | Filename of your appdaemon config. Required. |
 | `global_dependencies` | appdaemon specific configuration that hints library dependencies. Required. |
 | `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind. Required. |
+| `blind_tilt_position` | homeassistant name of the blind that controls the tilt but reports the tilt as a position. This is the case for some z-wave controller (ex. Fibaro roller shutter). Optional parameters, only use if your blind has this setup ([here](https://community.home-assistant.io/t/fibaro-roller-shutter-3-fgr-223-cannot-get-it-to-work-properly/97577/158) for a detailled conversation). |
 | `inside_temperature` | the thermostat that gives you the inside temperature. Use a room closeby if you don't have thermostats in every room. Required parameter. |
 | `inside_temperature_is_no_thermostat` | set to `true` if you don't own a thermostat but merely a device that knows the inside temperature. If this parameter is set the code will grab the state value of the entity, otherwise it will grab the `current_temperature` attribute of the entity of `inside_temperature`. |
 | `max_temp_sensor_value_yesterday` | homeassistant input_number that stores yesterday's maximum temperature |

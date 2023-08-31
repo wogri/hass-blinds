@@ -63,7 +63,10 @@ class Blinds(hass.Hass, Sun):
   def evaluate(self):
     """Check if we need to do something with the blinds. """
     knx_current_position = self.get_state(self.args["blind"], attribute="current_position")
-    knx_current_angle = self.get_state(self.args["blind"], attribute="current_tilt_position")
+    if 'blind_tilt_position' not in self.args:
+      knx_current_angle = self.get_state(self.args["blind"], attribute="current_tilt_position")
+    else:
+      knx_current_angle = self.get_state(self.args["blind_tilt_position"], attribute="current_position")
     if knx_current_position is None:
       self.set_state_reason("unknown real-life knx position. Doing nothing.")
       return
@@ -117,7 +120,10 @@ class Blinds(hass.Hass, Sun):
       #return
     tilt_position = kwargs.get('tilt_position')
     self.log("Changing angle/tilt of blind %s from %s to %s" % (self.args["blind"], self.knx_current_angle, tilt_position))
-    self.call_service("cover/set_cover_tilt_position", entity_id=self.args["blind"], tilt_position=tilt_position)
+    if 'blind_tilt_position' not in self.args:
+      self.call_service("cover/set_cover_tilt_position", entity_id=self.args["blind"], tilt_position=tilt_position)
+    else:
+      self.call_service("cover/set_cover_position", entity_id=self.args["blind_tilt_position"], position=tilt_position)
     self.b.UnsetMasterLock()
 
   def release_kill_switch(self, _unused):
@@ -125,7 +131,7 @@ class Blinds(hass.Hass, Sun):
     self.b.ReleaseKillSwitch()
 
   def set_state_reason(self, reason):
-    # self.log(reason)
+    self.log(reason)
     obj = "input_text.%s_status" % self.args["blind"].replace("cover.", "")
     self.call_service("input_text/set_value", entity_id=obj, value=reason) 
 

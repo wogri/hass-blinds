@@ -355,8 +355,12 @@ class Blind:
     return False
 
   def SunHitsWindow(self):
-    return (self.azimuth > self.azimuth_entry and
-            self.azimuth < self.azimuth_exit)
+    if self.azimuth_entry < self.azimuth_exit:
+      return (self.azimuth > self.azimuth_entry and
+              self.azimuth < self.azimuth_exit)
+    else:
+      return (self.azimuth > self.azimuth_entry or
+              self.azimuth < self.azimuth_exit)
 
   def DayLight(self):
     return self.lux_last_10_minutes > Sun.LUX_DAYLIGHT
