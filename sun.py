@@ -7,10 +7,10 @@ class Sun(hass.Hass, Sun):
 
   def initialize(self):
     self.log("Initializing Sun data collector...")
-    self.listen_state(self.lux, entity=self.args["brightness_sensor"])
-    self.listen_state(self.lux, entity=self.args["brightness_at_dawn_sensor"])
+    self.listen_state(self.lux, entity_id=self.args["brightness_sensor"])
+    self.listen_state(self.lux, entity_id=self.args["brightness_at_dawn_sensor"])
     self.lux_values = []
-    time = datetime.time(1, 1, 35)
+    time = datetime.time(0, 0, 30)
     self.run_minutely(self.lux, time)
 
   def lux(self, entity=None, attribute=None, old=None, new=None, kwargs=None):
