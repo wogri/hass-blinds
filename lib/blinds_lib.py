@@ -62,7 +62,7 @@ class Blind:
                manual_night_control=False,
                manual_day_control=False, ledge=None,
                window_azimuth_position=None, window_type='window',
-               window_open=False, alarm_lock=False,
+               window_open=False,
                # max inside temperatur is when the blinds go down on cold days (< 21 degree maximum)
                max_inside_temperature_cold_day=25.0,
                # min inside temperatur is when the blinds go down on warm days (> 21 degree maximum)
@@ -92,7 +92,6 @@ class Blind:
     self.manual_night_control = manual_night_control
     self.manual_day_control = manual_day_control
     self.window_type = window_type
-    self.alarm_lock = alarm_lock
     self.last_position = None
     self.last_angle = None
     self.desired_position = None
@@ -121,6 +120,10 @@ class Blind:
 
   def log(self, msg):
     self.logmsg.append(msg)
+
+  def SetDoorType(self):
+    self.window_type='door'
+    self.log('Blind treated as door')
 
   def SetWindowClosed(self):
     if self.window_type == 'door':
@@ -182,8 +185,6 @@ class Blind:
   def SetLux(self, average_value):
     self.lux_last_10_minutes = average_value
 
-  def SetAlarm(self, alarm):
-    self.alarm_lock = alarm
 
   def SetWindLock(self, wind_lock):
     self.wind_lock = wind_lock
@@ -348,11 +349,20 @@ class Blind:
     return angle
 
   def ManualDayControl(self):
+    day = False
     if self.manual_day_control:
-      if datetime.datetime.now().hour > 12:
-        return False
-      return True
-    return False
+      if isinstance(self.manual_day_control, str):
+        try:
+          day = datetime.datetime.strptime(self.manual_day_control, "%H:%M").time() > datetime.datetime.now().time()
+        except ValueError:
+          self.log("The manual day control time is not in the correct format and will default to 12:00, please use the format HH:MM", level="WARNING")
+          day = datetime.datetime.now().hour > 12
+      elif isinstance(self.manual_day_control, bool):
+        day = datetime.datetime.now().hour > 12
+      else:
+        self.log("The manual day control time is not in the correct format and will default to 12:00, please use the format HH:MM", level="WARNING")
+        day = datetime.datetime.now().hour > 12
+    return day
 
   def SunHitsWindow(self):
     if self.azimuth_entry < self.azimuth_exit:
@@ -413,11 +423,8 @@ class Blind:
       return self.SetDesiredPositions(self.UP, self.UP, message)
 
   def Control(self):
-    if self.alarm_lock == True and self.wind_lock != True:
-      pass
-      # return self.Down(self.DOWN, self.DOWN, 'Alarm lock is on. Nobody is home. Blinds down')
     if self.wind_lock == True:
-      return self.DoNothing('Wind lock is on')
+      return self.SetDesiredPositions(self.UP, self.UP, 'Wind Alarm blinds go up to prevent damage')
     if self.Darkness():
       # this avoids the case where the blinds go up again when the light was already turned on but it gets a little bit brigher (if a cloud vanishes). This is a poor-mans hysteresis implementation.
       if self.lux_dark == Sun.LUX_DARK_WITH_LIGHT_INSIDE:

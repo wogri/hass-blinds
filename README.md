@@ -29,122 +29,31 @@ The best (and most complicated) part about hass-blinds is that they tend to be f
 
 ## Sensor requirements
 
-You need the following sensors to make full use of this library 
+You need the following sensors to make full use of this library (ideally you own a weather station)
 
-- Outside temperature
-- Room temperature
-- Outside Lux 
-
-## Configuration
-
-This library is configured through the "normal" appdaemon configuration file `apps.yaml`. Here's a (more complicated) example of a single window:
-
-```yaml
-blind_wohnzimmer_west:
-  class: Blinds
-  module: blinds
-  dependencies: 
-  - blind_lib_global
-  - hysteresis_lib_global
-  - sun_lib_global
-  blind: cover.raffstore_erdgeschoss_wohnzimmer_west
-  inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
-  max_temp_sensor_value_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
-  wind_alarm: binary_sensor.wetter_zentrale_funktionen_windalarm_jalousien
-  outside_temperature_sensor: sensor.wetter_zentrale_funktionen_aussentemperatur
-  contact: binary_sensor.kontakt_erdgeschoss_wohnzimmer_hebe_schiebetuer
-  blind_config:
-    azimuth_entry: 173
-    azimuth_exit: 290
-    manual_night_control: True
-    window_type: door
-    max_inside_temperature_cold_day: 24
-    ledge: 135
-    window_azimuth_position: 173
-    kill_switch_hold_time: 4
-  dawn_lights:
-  - light.dimmer_erdgeschoss_essbereich
- ```
-
-You need to configure these parameters for every window.
-
-| yaml key | meaning |
-|----------|---------|
-| `class` | Appdaemon config parameter that hints the python class. Required. |
-| `module` | Filename of your appdaemon config. Required. |
-| `global_dependencies` | appdaemon specific configuration that hints library dependencies. Required. |
-| `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind. Required. |
-| `blind_tilt_position` | homeassistant name of the blind that controls the tilt but reports the tilt as a position. This is the case for some z-wave controller (ex. Fibaro roller shutter). Optional parameter, only use if your blind has this setup ([here](https://community.home-assistant.io/t/fibaro-roller-shutter-3-fgr-223-cannot-get-it-to-work-properly/97577/158) for a detailled conversation). |
-| `inside_temperature` | the thermostat that gives you the inside temperature. Use a room closeby if you don't have thermostats in every room. Required parameter. |
-| `inside_temperature_is_no_thermostat` | set to `true` if you don't own a thermostat but merely a device that knows the inside temperature. If this parameter is set the code will grab the state value of the entity, otherwise it will grab the `current_temperature` attribute of the entity of `inside_temperature`. |
-| `max_temp_sensor_value_yesterday` | homeassistant input_number that stores yesterday's maximum temperature |
-| `wind_alarm` | homeassistant binary sensor that tells the system if a wind alarm (too much wind) just put all blinds up. This helps the code to handle that situation instead of believing that a human overrode the settings. Hass-blinds does not act on too much wind. I would recommend implementing this in your native blind communication protocol to avoid keep things simple and save your blinds from bending in high wind situations. This parameter is required. If you don't have a wind alarm, set it to a string that doesn't exist in home assistant. |
-| `outside_temperature_sensor` | The sensor for outside temperature. Required parameter. |
-| `contact` | homeassistant binary sensor that knows if the window is open or not. Is dependent on the window_type. If the window_type is not `door`, then this sensor is not used. |
-| `blind_config` | A hash that configures the Blind class in the constructor of lib/blinds_lib.py. This allows you to override defaults. Required. |
-| `azimuth_entry` | This is the angle of the sun when it starts hitting the window. You can find this out if you position your house on a map. North is an azimuth angle of zero. The `azumuth_entry` is the angle from the north axis when the sun starts hitting your window. You can also look at the azimuth in homeassistant, and when the sun hits your window you can just write down this number. This parameter is required. |
-| `azimuth_exit` | This is the angle when the sun no longer shines into your window. This parameter is required. |
-| `manual_night_control` | Set to `True` if you don't want the blinds to go down in the evening. Default is to go down, so you could omit this configuration paramter. |
-| `manual_day_control` | Set to `True` if you don't want the blinds to go up when it dawns in the morning. Useful for rooms where you sleep for example if you like it staying dark in the morning. Once the sun becomes too bright the blinds will go down regardless of this parameter. Omit if you want the blinds to go up as soon as it's bright enough. |
-| `window_type` | Only if this is set to `door` the blinds will not go down if the window is open. Once you close the door the blind control will sleep for 30 minutes and then position itself. This waiting time is useful if you want to go out, close your door in the summer to avoid heat coming in, and therefore avoid locking yourself out. |
-| `max_inside_temperature_cold_day` | Maximum inside temperature before the blinds go down on a cold day. A day is considered cold if the maximum temperature of the previous day is below 16 degrees celsius. |
-| `kill_switch_hold_time` | Hours until the systems pauses if it discovers a human overriding its decisions. Default is 8 hours. Omit to keep the default. |
-| `ledge` | If the window is under a ledge, this is the ledge length in centimeters. If the window is not under a ledge, omit. |
-| `window_azimuth_position` | In order to do the math with a window being under a ledge we need to know the exact position of the window so we know how the ledge throws shadow. This angle describes the azimuth of the sun when the window is positioned in an exact right angle to the sun. If the window is not under a ledge, omit. |
-| `dawn_lights` | A list of homeassistant lights that change the lux threshold when the lights in a room are turned on. If the lights get turned on the blinds will go down sooner when it dawns. The reason why you might want to use this is because turning on the lights in a room changes the subjective feeling for how dark it is outside and how "watched" you feel. |
-| `blind_runtime` | Optional parameter that defines how long it will take the blind until it has moved from top to bottom. Used to set the angle faster (otherwise the blind will remain shut for a while) |
-| `disable_tilt` | Optional parameter that you would need to set to `true` in case your blinds don't have the option to set a tilt (like with roller shutters). |
-| `ignore_10_percent_precision` | Optional parameter that you would need to set to `true` when you want to ignore 10% rounding errors on position and tilt. This is useful for blinds that have the ability to report 100% accurate values on position and tilt. |
+- Outside temperature (°C)
+- Outside Lux (lux) or Radiance (W/m²)
+- Wind Speed (km/h) (Optional)
+- Room temperature (°C)
 
 ## Installation
 
 - For Git users:
   Open the terminal and move to the appdaemon/apps directory and clone the git repository
-  `cd /config/appdaemon/apps` 
+  `cd /addon_configs/[XXXX]_appdaemon/apps` 
   `clone https://github.com/wogri/hass-blinds.git`
-  OR if you do not have git installed:
+- If you do not have git installed:
   Copy the python files in this repository into your `appdaemon/apps/hass-blinds` directory. The files in the `lib/` directory land in the `apps/lib` directory as well. 
-- Configure your apps.yaml file. Every window gets its own yaml dict.
 
-In addition to configuring every window the engine needs three helper apps. So please don't forget to add those: 
+## Configuration
 
-```yaml
-blind_lib_global:
-  module: blinds_lib
-  global: true
+### Configuring appdaemon.yaml
 
-hysteresis_lib_global:
-  module: hysteresis_li`
-  global: true
-
-sun_lib_global:
-  module: sun_lib
-  global: true
-
-sun:
-  class: Sun
-  module: sun
-  dependencies: 
-  - sun_lib_global
-
-max_temp:
-  class: MaxTemp
-  module: max_temp
-  outside_temp_sensor: sensor.wetter_zentrale_funktionen_aussentemperatur
-  max_temp_sensor: input_number.max_outside_temp_over_24_hours
-  max_temp_sensor_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
-
-```
-
-Both of these help to fill `input_number` variables inside of homeassistant. That is the current average of sunshine as well as the maximum temperature of each day to understand if we are in a cold or in a warm season.
-
-### Configuring appdaemon
-
-To do sun math correctly homeassistant and appdaemon need to know where you live. So please be sure to configure the latitude and longitude in `appdaemon.yaml` and your `secrets.yaml`: 
+To do sun math correctly, homeassistant and appdaemon need to know where you live. So please be sure to configure the latitude and longitude in `appdaemon.yaml` and your `secrets.yaml`: 
 
 ```yaml
 appdaemon:
-secrets: /config/secrets.yaml
+secrets: /homeassistant/secrets.yaml # for old version use of appdaemon use /config/secrets.yaml
   # Location required to calculate the time the sun rises and sets                                                          
   latitude: !secret latitude_home
   longitude: !secret longitude_home
@@ -166,6 +75,10 @@ hadashboard:
 In homeassistant's configuration.yaml you want to add the required input numbers so the apps can do some cross communication through homeassistant. Please ensure also in your setting that your HA location is correctly set.
 
 ```yaml
+input_boolean:
+  wind_alarm:
+    name: Strong Wind Alarm
+
 input_number:
   sun_lux_10_minute_average:
     min: 0
@@ -185,9 +98,144 @@ input_number:
     max: 65
     step: 0.1
     mode: box
+  min_outside_temp_over_24_hours:
+    name: Mimum outside temperature
+    min: -60
+    max: 65
+    step: 0.1
+    mode: box
+  yesterdays_min_outside_temp_over_24_hours:
+    name: Yesterdays Minimm outside temperature
+    min: -60
+    max: 65
+    step: 0.1
+    mode: box
+
+```
+
+### Configuring appdaemon's app.yaml
+
+This library is configured through the "normal" appdaemon configuration file `apps.yaml`.
+
+Before being able to configure every window, the engine needs four helper apps. So please don't forget to add those: 
+
+```yaml
+lind_lib_global:
+  module: blinds_lib
+  global: true
+
+hysteresis_lib_global:
+  module: hysteresis_lib
+  global: true
+
+sun_lib_global:
+  module: sun_lib
+  global: true
 
 sun:
+  class: Sun
+  module: sun
+  dependencies:
+    - sun_lib_global
+  radiation_sensor: sensor.iwasse116_solar_radiation
+
+max_temp:
+  class: MaxTemp
+  module: max_temp
+  outside_temp_sensor: sensor.iwasse116_temperature
+  max_temp_sensor: input_number.max_outside_temp_over_24_hours
+  max_temp_sensor_yesterday: input_number.yesterdays_max_outside_temp_over_24_hours
+  min_temp_sensor: input_number.min_outside_temp_over_24_hours
+  min_temp_sensor_yesterday: input_number.yesterdays_min_outside_temp_over_24_hours
+
+wind:
+  class: Wind
+  module: wind
+  wind_speed_sensor: sensor.iwasse116_wind_gust
+  wind_resistance: 40
+  wind_alarm: input_boolean.wind_alarm
+
 ```
+
+In the sun library you need to configure at least either the `brightness_sensor` or the `radiation_sensor`, other parameters are optional
+| yaml key | meaning |
+|----------|---------|
+|`brightness_sensor`| The outside brightness measured by your weather station expressed in lux|
+|`radiation_sensor`| The outside radiation measured by your weather station expressed in W/m²|
+|`brightness_at_dawn_sensor`| The outside brightness if you have a specific captor for dawn light expressed in lux (optional)|
+|`radiation_at_dawn_sensor`| The outside radiation if you have a specific captor for dawn light expressed in W/m² (optional)|
+
+In the max_temp library you need to configure
+| yaml key | meaning |
+|----------|---------|
+|`outside_temp_sensor`| The outside temperature measured by your weather station expressed in C°|
+
+In the wind library you need to configure
+| yaml key | meaning |
+|----------|---------|
+|`wind_speed_sensor`| The wind speed measured by your weather station expressed in km/h|
+
+These helpers will fill the `input_number` variables inside homeassistant (defined previously). These are:
+- the current average of sunshine 
+- the maximum/minimum temperature of each day to understand if we are in a cold or in a warm season.
+- the wind alarm to prevent blind damage in case of strong win
+
+## Automate a cover in appdaemon's apps.yaml file
+
+Every window gets its own yaml dict that you need to append to appdaemon's `apps.yaml` file
+
+This library is configured through the "normal" appdaemon configuration file . Here's a (more complicated) example of a single window the `blind_wohnzimmer_west` :
+
+```yaml
+blind_wohnzimmer_west:
+  class: Blinds
+  module: blinds
+  dependencies: 
+  - blind_lib_global
+  - hysteresis_lib_global
+  - sun_lib_global
+  blind: cover.raffstore_erdgeschoss_wohnzimmer_west
+  inside_temperature: climate.thermostat_erdgeschoss_wohnzimmer
+  contact: binary_sensor.kontakt_erdgeschoss_wohnzimmer_hebe_schiebetuer
+  blind_config:
+    azimuth_entry: 173
+    azimuth_exit: 290
+    manual_night_control: "10:00"
+    contact: binary_sensor.capteur_ouverture_salon_window_door_is_open
+    max_inside_temperature_cold_day: 24
+    ledge: 135
+    window_azimuth_position: 173
+    window_height: 180
+    kill_switch_hold_time: 4
+  dawn_lights:
+  - light.dimmer_erdgeschoss_essbereich
+ ```
+
+You need to configure these parameters for every window.
+
+| yaml key | meaning |
+|----------|---------|
+| `class` | Appdaemon config parameter that hints the python class. Required. |
+| `module` | Filename of your appdaemon config. Required. |
+| `global_dependencies` | appdaemon specific configuration that hints library dependencies. Required. |
+| `blind` | homeassistant name of the blind. Needs to support angle setting and positioning of the blind. Required. |
+| `blind_tilt_position` | homeassistant name of the blind that controls the tilt but reports the tilt as a position. This is the case for some z-wave controller (ex. Fibaro roller shutter). Optional parameter, only use if your blind has this setup ([here](https://community.home-assistant.io/t/fibaro-roller-shutter-3-fgr-223-cannot-get-it-to-work-properly/97577/158) for a detailed conversation). |
+| `inside_temperature` | the thermostat that gives you the inside temperature (it grabs automatically the state or the current_temperature` attribute of the captor). Use a room close by if you don't have thermostats in every room. Required parameter. |
+| `contact` | homeassistant binary sensor that knows if the window is open or not. If used, the blinds will not go down if the window is open. Once you close the door the blind control will sleep for 30 minutes and then position itself. This waiting time is useful if you want to go out, close your door in the summer to avoid heat coming in, and therefore avoid locking yourself out. | 
+| `blind_config` | A hash that configures the Blind class in the constructor of lib/blinds_lib.py. This allows you to override defaults. Required. |
+| &emsp;`azimuth_entry` | This is the angle of the sun when it starts hitting the window. You can find this out if you position your house on a map. North is an azimuth angle of zero. The `azumuth_entry` is the angle from the north axis when the sun starts hitting your window. You can also look at the azimuth in homeassistant, and when the sun hits your window you can just write down this number. This parameter is required. |
+| &emsp;`azimuth_exit` | This is the angle when the sun no longer shines into your window. This parameter is required. |
+| &emsp;`manual_night_control` | Set to `True` if you don't want the blinds to go down in the evening. Default is to go down, so you could omit this configuration parameter. |
+| &emsp;`manual_day_control` | Set to `True` if you don't want the blinds to go up when it dawns in the morning. You could also set it to a certain time in the format "HH:MM". Useful for rooms where you sleep for example if you like it staying dark in the morning. Once the sun becomes too bright the blinds will go down regardless of this parameter. Omit if you want the blinds to go up as soon as it's bright enough. |
+|&emsp; `max_inside_temperature_cold_day` | Maximum inside temperature before the blinds go down on a cold day. A day is considered cold if the maximum temperature of the previous day is below 16 degrees Celsius. |
+|&emsp; `kill_switch_hold_time` | Hours until the systems pauses if it discovers a human overriding its decisions. Default is 8 hours. Omit to keep the default. |
+| &emsp;`ledge` | If the window is under a ledge, this is the ledge length in centimeters. If the window is not under a ledge, omit. |
+| &emsp;`window_azimuth_position` | In order to do the math with a window being under a ledge we need to know the exact position of the window so we know how the ledge throws shadow. This angle describes the azimuth of the sun when the window is positioned in an exact right angle to the sun. If the window is not under a ledge, omit. |
+| &emsp;`window_height` | The height of the window in cm. If the window is not under a ledge, omit. |
+| &emsp;`disable_tilt` | Optional parameter that you would need to set to `true` in case your blinds don't have the option to set a tilt (like with roller shutters). |
+| `dawn_lights` | A list of homeassistant lights that change the lux threshold when the lights in a room are turned on. If the lights get turned on the blinds will go down sooner when it dawns. The reason why you might want to use this is because turning on the lights in a room changes the subjective feeling for how dark it is outside and how "watched" you feel. |
+| `blind_runtime` | Optional parameter that defines how long it will take the blind until it has moved from top to bottom. Used to set the angle faster (otherwise the blind will remain shut for a while) |
+| `use_10_percent_precision` | Optional parameter that you would need to set to `true` when you want to setup 10% rounding errors on position and tilt. This is useful for blinds that do not have the ability to report 100% accurate values on position and tilt. |
 
 For every home assistant cover (I call them blinds) that you configure you need to add an `input_text` variable. This variable is extremely useful for understanding why hass-blinds did or did not do something with blinds. So if your cover in homeassistant is called `cover.raffstore_erdgeschoss_kueche_fixteil_west` you need to create an `input_text` in your homeassistant config called `input_text.raffstore_erdgeschoss_kueche_fixteil_west_status` (note the `_status` suffix). In the homeassistant `configuration.yaml` this looks like this:
 
@@ -200,8 +248,8 @@ input_text:
 
 #### Kill Switch
 
-There are times (for example when it snows and freezes over night) where you want to disable your blind automation and want to go full manual.
-Therefore you need to implement a kill switch in homeassistant. That entity is expected to be called `switch.raffstore_kill_switch` in homeasisstant.
+There are times (for example when it snows and freezes overnight) where you want to disable your blind automation and want to go full manual.
+Therefore, you need to implement a kill switch in homeassistant. That entity is expected to be called `switch.raffstore_kill_switch` in homeasisstant.
 
 ## Contribute
 

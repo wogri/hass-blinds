@@ -19,8 +19,10 @@ class Blinds(hass.Hass, Sun):
     self.run_daily(self.set_max_outside_temp, time)
     if "min_temp_sensor_value_yesterday" not in self.args:
       self.args["min_temp_sensor_value_yesterday"] = "input_number.yesterdays_min_outside_temp_over_24_hours"
-    self.set_max_outside_temp(None)
+    self.set_max_outside_temp(None)    
+
     if "contact" in self.args:
+      self.b.SetDoorType()
       self.listen_state(self.window_closed, entity_id=self.args["contact"], new="off", old="on")
 
     if "wind_alarm" in self.args:
@@ -32,7 +34,7 @@ class Blinds(hass.Hass, Sun):
         self.listen_state(self.light_off, entity_id=light, new="off", old="on")
 
   def window_closed(self, entity, attribute, old, new, kwargs):
-    if "window_type" in self.args["blind_config"] and self.args["blind_config"]["window_type"] == "door":
+    if "contact" in self.args:
       self.log("Window %s has been closed. Activating kill switch for 30 minutes." % self.args["contact"])
       self.b.SetWindowClosed()
 
@@ -71,10 +73,11 @@ class Blinds(hass.Hass, Sun):
       self.set_state_reason("unknown real-life knx position. Doing nothing.")
       return
     # because blind positions can vary when changing the tilt (!) we round on 10 percent precision.
-    if "ignore_10_percent_precision" not in self.args:
-      if knx_current_angle is not None:
-        knx_current_angle = int(knx_current_angle / 10) * 10
-      knx_current_position = int(knx_current_position / 10) * 10
+    if "use_10_percent_precision" in self.args:
+      if self.args["use_10_percent_precision"]:
+        if knx_current_angle is not None:
+          knx_current_angle = int(knx_current_angle / 10) * 10
+        knx_current_position = int(knx_current_position / 10) * 10
     self.knx_current_angle = knx_current_angle
     self.b.SetKNXPositions(knx_current_position, knx_current_angle)
     we_have_work = self.b.Evaluate()
@@ -137,13 +140,15 @@ class Blinds(hass.Hass, Sun):
 
 
   def set_max_outside_temp(self, _unused):
-    max_outside_temp = self.get_state(self.args["max_temp_sensor_value_yesterday"])
+    max_outside_temp = float(self.get_state(self.app_config["max_temp"]["max_temp_sensor_yesterday"]))
     if self.is_not_a_number(max_outside_temp):
       max_outside_temp = 24
+      self.log(f"Unable to read maximum outside temperature defaulting to {max_outside_temp}")
 
     min_outside_temp = self.get_state(self.args["min_temp_sensor_value_yesterday"])
     if self.is_not_a_number(min_outside_temp):
       min_outside_temp = 21
+      self.log(f"Unable to read minimum outside temperature defaulting to {min_outside_temp}")
 
     self.log(self.b.SetMaxOutsideTemperature(float(max_outside_temp), float(min_outside_temp)))
   
@@ -156,16 +161,21 @@ class Blinds(hass.Hass, Sun):
     if global_kill_switch == 'on':
       self.set_state_reason("Global Kill switch is on. All blinds are controlled manually.")
       return
-    outside_temp = self.get_state(self.args["outside_temperature_sensor"])
+    outside_temp = self.get_state(self.app_config["max_temp"]["outside_temp_sensor"])
     if self.is_not_a_number(outside_temp):
       self.set_state_reason('unknown outside temperature. doing nothing.')
       return
     self.b.SetOutsideTemperature(float(outside_temp))
+
+    # Get inside temperature
     inside_temp = 'unknown'
-    if 'inside_temperature_is_no_thermostat' in self.args and self.args['inside_temperature_is_no_thermostat']:
-      inside_temp = self.get_state(self.args["inside_temperature"])
+    if self.get_state(self.args['inside_temperature'], attribute='current_temperature') is None:
+      if self.get_state(self.args["inside_temperature"]) is None:
+        self.log(f"Cannot read inside temperature, please provide inside_temperature", level="ERROR")
+      else:
+        inside_temp = self.get_state(self.args["inside_temperature"])
     else:
-      inside_temp = self.get_state(self.args["inside_temperature"], attribute="current_temperature")
+        inside_temp = self.get_state(self.args["inside_temperature"], attribute="current_temperature")
     
     if self.is_not_a_number(inside_temp):
       self.set_state_reason('unknown inside temperature. doing nothing.')
@@ -180,10 +190,7 @@ class Blinds(hass.Hass, Sun):
     if "contact" in self.args:
       self.b.SetReedContact(self.get_state(self.args["contact"]) == "on")
 
-    alarm = self.get_state("input_boolean.alarmanlage_scharf") == "on"
-    self.b.SetAlarm(alarm)
-
-    wind_lock = self.get_state(self.args["wind_alarm"]) == "on"
+    wind_lock = self.get_state(self.app_config["wind"]["wind_alarm"]) == "on"
     self.b.SetWindLock(wind_lock)
 
     self.evaluate()
