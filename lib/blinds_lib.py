@@ -363,9 +363,8 @@ class Blind:
     if self._position_changed_by_user(kill_switch_status):
       return self.NO_CHANGE
 
-    self.UpdateLastStateFromDesiredState()
-
     if self._positions_match():
+      self.UpdateLastStateFromDesiredState()
       return self.NO_CHANGE
 
     return self.BLIND_NEEDS_MOVING
@@ -743,8 +742,15 @@ class Blind:
                   f"({outside_temp:.1f}°C, {lux_avg:.0f} lx, elev {sun_elev:.1f}°)"
               )
               self.log(f"[ExtremeHeat] {reason}")
-              self.Up(self.UP, self.UP, reason)
-              return reason
+              return False
+          
+          reason = (
+              f"Extreme heat ACTIVE, hold blinds down "
+              f"({elapsed:.0f}/{MIN_DURATION_MIN} min, "
+              f"{outside_temp:.1f}°C, {lux_avg:.0f} lx, elev {sun_elev:.1f}°)"
+          )
+          self.Down(self.DOWN, self.DOWN, reason)
+          return reason
 
       # --- No change ---
       return False

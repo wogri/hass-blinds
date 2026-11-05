@@ -23,6 +23,7 @@ class Blinds(hass.Hass):
         self.error_count = 0
         self.last_error = None
         self.pending_intent = None   # (position, tilt)
+        self.pending_command = None
 
         # ───────────────────────────────
         # External app instances (kept from your version)
@@ -318,19 +319,13 @@ class Blinds(hass.Hass):
 
     def _safe_call_service(self, domain: str, service: str, **kwargs):
         """
-        Hybrid async/sync safe service call with fine-grained rate limiting and fallback.
+        Safe service call with fine-grained rate limiting.
 
-        - Default: async (non-blocking) via AppDaemon's scheduler
-        - Fallback: synchronous retry if async fails or not confirmed
-        - Per-entity cooldown: avoids flooding Z-Wave and Home Assistant
+        Keep this synchronous and short. Waiting for an async callback from inside
+        an AppDaemon callback can block the worker thread and leave master locks set.
         """
 
         COOLDOWN = 5              # seconds between identical calls
-
-        if domain == "cover":
-            MAX_ASYNC_DELAY = 5
-        else:
-            MAX_ASYNC_DELAY = 1.0
      
         # --- Build unique key for this call ---
         key_parts = [domain, service]
@@ -354,40 +349,11 @@ class Blinds(hass.Hass):
         # --- Build service string ---
         domain_service = f"{domain}/{service}"
 
-        # --- Track async result ---
-        setattr(self, f"_last_async_ok_{call_key}", None)
-
-        # --- Define async call wrapper ---
-        def async_wrapper(_):
-            try:
-                self.call_service(domain_service, **kwargs)
-                setattr(self, f"_last_async_ok_{call_key}", True)
-                self.log(f"[SAFE-ASYNC] Executed {domain_service} {kwargs}", level="DEBUG")
-            except Exception as e:
-                setattr(self, f"_last_async_ok_{call_key}", False)
-                self.log(f"[SAFE-ASYNC] Failed {domain_service}: {e}", level="WARNING")
-
-        # --- Schedule non-blocking async call ---
-        self.run_in(lambda _: async_wrapper(_), 0)
-
-        # --- Wait briefly to check result ---
-        self.sleep(0.1)  # allow scheduler to run
-        start = time.time()
-        while time.time() - start < MAX_ASYNC_DELAY:
-            result = getattr(self, f"_last_async_ok_{call_key}", None)
-            if result is True:
-                return  # async worked fine
-            elif result is False:
-                break
-            self.sleep(0.05)
-
-        # --- Fallback to synchronous call ---
-        self.log(f"[SAFE-FALLBACK] Retrying {domain_service} synchronously after async delay.", level="WARNING")
         try:
             self.call_service(domain_service, **kwargs)
-            self.log(f"[SAFE-SYNC] Executed {domain_service} successfully after fallback.", level="INFO")
+            self.log(f"[SAFE] Executed {domain_service} {kwargs}", level="DEBUG")
         except Exception as e:
-            self.log(f"[SAFE-SYNC] FAILED {domain_service}: {e}", level="ERROR")
+            self.log(f"[SAFE] FAILED {domain_service}: {e}", level="ERROR")
 
 
     def release_kill_switch(self, _unused):
@@ -398,6 +364,11 @@ class Blinds(hass.Hass):
     # Periodic tick & evaluation
     # ----------------------
     def tick(self, _unused):
+        if self._movement_pending_active():
+            self.b.UnsetMasterLock()
+            self.set_state_reason("Movement in progress. Waiting for KNX feedback.")
+            return
+
         # prevent concurrency while a movement scenario is running
         if self.b.GetMasterLock():
             self.log(f"Masterlock active for {self.args['blind']}")
@@ -522,28 +493,48 @@ class Blinds(hass.Hass):
 
         # --- 1️⃣ Skip automation during manual override grace period ---
         if self.manual_override_active():
+            hold_time = self.b.GetKillSwitchHoldTime()
             self.log(
-                f"[MANUAL] Skipping automation (cooldown active, {self.kill_switch_hold_time}h remaining)",
+                f"[MANUAL] Skipping automation (cooldown active, {hold_time}h remaining)",
                 level="DEBUG",
             )
+            self.b.UnsetMasterLock()
             return
 
-        # --- 2️⃣ Detect manual movement (position or tilt changed unexpectedly) ---
+        # --- 2️⃣ Detect manual movement only if automation target did not change ---
+        last_command_pos = getattr(self, "last_command_pos", current_pos)
+        last_command_angle = getattr(self, "last_command_angle", current_angle)
+        position_target_changed = abs(target_pos - last_command_pos) > 5
+        angle_target_changed = (
+            target_angle is not None
+            and last_command_angle is not None
+            and abs(target_angle - last_command_angle) > 5
+        )
+        position_changed_unexpectedly = abs(current_pos - last_command_pos) > 5
+        angle_changed_unexpectedly = (
+            target_angle is not None
+            and last_command_angle is not None
+            and abs(current_angle - last_command_angle) > 5
+        )
+
         if (
-            abs(current_pos - getattr(self, "last_command_pos", current_pos)) > 5
-            or abs(current_angle - getattr(self, "last_command_angle", current_angle)) > 5
+            (position_changed_unexpectedly or angle_changed_unexpectedly)
+            and not (position_target_changed or angle_target_changed)
         ):
             self.last_manual_override = datetime.datetime.now()
+            hold_time = self.b.GetKillSwitchHoldTime()
             self.log(
                 f"[MANUAL] User override detected (pos={current_pos}, tilt={current_angle}). "
-                f"Automation paused for {self.kill_switch_hold_time}h.",
+                f"Automation paused for {hold_time}h.",
                 level="WARNING",
             )
+            self.b.UnsetMasterLock()
             return
 
         # --- 3️⃣ If already moving, skip ---
         if getattr(self, "moving", False):
             self.log("[MOVE] Skipped: blind still moving", level="DEBUG")
+            self.b.UnsetMasterLock()
             return
 
         # --- 4️⃣ Compute movement ---
@@ -551,6 +542,9 @@ class Blinds(hass.Hass):
             self.moving = True
             self.last_command_pos = target_pos
             self.last_command_angle = target_angle
+            self.b.UpdateLastStateFromDesiredState()
+            travel_time = getattr(self, "travel_time_s", 90)
+            self._set_pending_command(target_pos, target_angle, travel_time + 5)
 
             self.log(
                 f"[MOVE] Moving to {target_pos}% | tilt -> {target_angle}",
@@ -583,8 +577,33 @@ class Blinds(hass.Hass):
                 )
 
             # Reset moving flag after travel time
-            travel_time = getattr(self, "travel_time_s", 90)
             self.run_in(lambda _: setattr(self, "moving", False), travel_time)
+            self.b.UnsetMasterLock()
+        else:
+            self.b.UnsetMasterLock()
+
+    def _set_pending_command(self, position, angle, duration):
+        self.pending_command = {
+            "position": position,
+            "angle": angle,
+            "until": datetime.datetime.now() + datetime.timedelta(seconds=duration)
+        }
+
+    def _movement_pending_active(self):
+        pending_command = getattr(self, "pending_command", None)
+        if not pending_command:
+            return False
+
+        if datetime.datetime.now() < pending_command["until"]:
+            self.log(
+                f"[MOVE] Pending command active until {pending_command['until']:%H:%M:%S} "
+                f"(pos={pending_command['position']}, tilt={pending_command['angle']})",
+                level="DEBUG"
+            )
+            return True
+
+        self.pending_command = None
+        return False
 
     def _set_tilt_position(self, tilt_entity, tilt_position):
         if 'blind_tilt_position' not in self.args:
@@ -613,7 +632,7 @@ class Blinds(hass.Hass):
             return False
 
         delta = datetime.datetime.now() - self.last_manual_override
-        hold_time_sec = self.b.GetKillSwitchHoldTime * 3600  # convert hours to seconds
+        hold_time_sec = self.b.GetKillSwitchHoldTime() * 3600  # convert hours to seconds
 
         return delta.total_seconds() < hold_time_sec
 
